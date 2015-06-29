@@ -5,12 +5,15 @@ from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
 BASEFOLDER = 'D:\\Documents\\Data\\DMED'
+IMGFOLDER = 'DMED-P'
+LABELFOLDER = 'DMED-P'
+TXTFOLDER = 'DMED-GT'
 
 #assumes preprocessed images are in DMED-P
-def getTrainingImage(name, words = ['Exudate'], basefolder = BASEFOLDER):
-    imagepath = os.path.join(basefolder, 'DMED-P', name + '.jpg')
-    labelspath = os.path.join(basefolder, 'DMED-GT', name+ '.tif')
-    namespath = os.path.join(basefolder, 'DMED-GT', name + '.txt')
+def getTrainingImage(name, words = ['Exudate'], basefolder = BASEFOLDER, imgfolder = IMGFOLDER, labelfolder = LABELFOLDER, namefolder = NAMEFOLDER):
+    imagepath = os.path.join(basefolder, imgfolder, name + '.jpg')
+    labelspath = os.path.join(basefolder, labelfolder, name+ '.tif')
+    namespath = os.path.join(basefolder, namefolder, name + '.txt')
 
     image = skio.imread(imagepath)
     labels = skio.imread(labelspath)
