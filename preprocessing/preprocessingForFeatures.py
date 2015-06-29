@@ -12,18 +12,20 @@ import cv2
 #from opticDiscVesselDetection import detectOpticDisc
 from scipy.ndimage.filters import median_filter
 
+"""
+This class preprocesses the original image for feature extraction
+"""
 class Images(object):
     
     def __init__(self, image):
         self.green_plane = image[:,:,1]
         self.background_image = median_filter(self.green_plane, size=17)
         self.shade_corrected_image = self.green_plane.astype(np.int) - self.background_image.astype(np.int)
-        print self.shade_corrected_image.dtype
         self.pp = np.copy(self.shade_corrected_image)
         self.pp[self.pp > 0] = 0
         image_hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
         intensity = np.mean(image, axis=2)
-        intensity = median_filter(intensity, size=25)
+        intensity = median_filter(intensity, size=5)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         intensity = intensity.astype(np.uint16)
         intensity = clahe.apply(intensity)
@@ -38,4 +40,4 @@ if __name__ == "__main__":
     
     image = skio.imread(testpic, False)
     x = Images(image)
-    skio.imshow(x.hsi_image)
+    skio.imshow(x.hsi_image[:,:,2])

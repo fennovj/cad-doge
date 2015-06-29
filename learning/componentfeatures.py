@@ -12,7 +12,7 @@ from math import pi
 area = lambda picture, label: np.sum(picture == label)
     
 perimeter = lambda picture, label: perim(picture == label, 8)
-    
+
 def aspectratio(picture, label):
     widtho = np.max(picture == label, 0)
     heighto = np.max(picture == label, 1)
