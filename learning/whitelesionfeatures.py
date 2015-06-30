@@ -18,7 +18,7 @@ import cv2
 
 sys.path.append("C:\Users\Bram Arends\Dropbox\CAD\Project\cad-doge\preprocessing")
 from preprocessing.preprocessingForFeatures import Images
-from preprocessing.opticdiscdetection import detectOpticDisc
+#from opticdiscdetection import detectOpticDisc
 
 """
 Areas of clusters (number of pixels)
@@ -58,15 +58,14 @@ Get features corresponding to the optic disc, needs the size of the
 clusters as well
 """
 def opticDiscFeatures(rgbimage, areas):
-    op = detectOpticDisc(rgbimage)
-    ratios = computeRatio(op, areas)
+    ratios = computeRatio(rgbimage, areas)
     return ratios
     
 """
-TODO
+Count the number of edge pixels in a 17 by 17 window
 """
 def nrOfEdgePixels(rgbimage, intensityImage):
-    redEdges = sobel(image[:,:,0])
+    redEdges = sobel(rgbimage[:,:,0])
     grayEdges = sobel(intensityImage)
     t = redEdges - grayEdges
     t[t < 0.05] = 0
@@ -98,16 +97,33 @@ def getDoG(image, sigma1, sigma2):
 Get all the features for white lesion detection
 """
 def getWhiteLesionFeatures(image):
+    s = 512
+    r = image[:,:,0]==np.zeros(image[:,:,0].shape)  
+    g = image[:,:,1]==np.zeros(image[:,:,1].shape)  
+    b = image[:,:,2]==np.zeros(image[:,:,2].shape)
+    mask = np.logical_and(np.logical_and(r, g), b)
+    mask = mask.reshape((s*s, 1))
     ppimages = Images(image)
     areas = agglomerativeClusteringFeatures(ppimages.hsi_image)
-    features = np.concatenate((ppimages.hsi_image[:, :, 2].reshape((512*512, 1)), 
-            stdConvoluted(ppimages.hsi_image[:,:,2], 7).reshape((512*512, 1)), 
-            ppimages.hsi_image[:, :, 0].reshape((512*512, 1)), 
-            opticDiscFeatures(image, areas).reshape((512*512, 1)), 
-            nrOfEdgePixels(image, ppimages.hsi_image[:, :, 2]).reshape((512*512, 1)),
-            getDoG(ppimages.hsi_image[:,:,2], 4, 8).reshape((512*512, 1))),
-            axis=1)
-    return zscore(features)
+    intensity = ppimages.hsi_image[:, :, 2].reshape((s*s, 1))
+    intensity[intensity==mask] = 0
+    std = stdConvoluted(ppimages.hsi_image[:,:,2], 7).reshape((s*s, 1))
+    std[std==mask] = 0
+    hue = ppimages.hsi_image[:, :, 0].reshape((s*s, 1))
+    hue[hue==mask] = 0
+    ratio = opticDiscFeatures(ppimages.image, areas).reshape((s*s, 1))
+    ratio[ratio==mask] = 0
+    edges = nrOfEdgePixels(ppimages.image, ppimages.hsi_image[:, :, 2]).reshape((s*s, 1))
+    edges[edges==mask] = 0
+    DoG4 = getDoG(ppimages.hsi_image[:,:,2], 4, 8).reshape((s*s, 1))
+    DoG4[DoG4==mask] = 0
+    features = np.concatenate((intensity,                  
+                              std, 
+                              hue, 
+                              ratio,
+                              edges,
+                              DoG4), axis=1)
+    return features
     
 if __name__ == "__main__":
 

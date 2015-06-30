@@ -9,7 +9,7 @@ import skimage.io as skio
 import numpy as np
 import cv2
 
-#from opticDiscVesselDetection import detectOpticDisc
+from opticdiscdetection import detectOpticDisc
 from scipy.ndimage.filters import median_filter
 
 """
@@ -18,6 +18,7 @@ This class preprocesses the original image for feature extraction
 class Images(object):
     
     def __init__(self, image):
+        self.image = detectOpticDisc(image)
         self.green_plane = image[:,:,1]
         self.background_image = median_filter(self.green_plane, size=17)
         self.shade_corrected_image = self.green_plane.astype(np.int) - self.background_image.astype(np.int)
