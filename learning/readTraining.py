@@ -4,6 +4,11 @@ import skimage.io as skio
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
+import os,sys,inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0,parentdir) 
+
 BASEFOLDER = 'D:\\Documents\\Data\\DMED'
 IMGFOLDER = 'DMED-P'
 LABELFOLDER = 'DMED-P'
@@ -34,12 +39,6 @@ def randomForest(train,
                  test,
                  sample_weight=None,
                  n_estimators=100,
-                 criterion='gini',
-                 max_features="auto",
-                 max_depth=None,
-                 min_samples_split=2,
-                 min_samples_leaf=1,
-                 max_leaf_nodes=None,
                  n_jobs=1,
                  verbose=0):
     """
@@ -52,18 +51,20 @@ def randomForest(train,
     n,f = np.shape(test)
     assert n % (512*512) == 0
     numimg = int(n / (512*512))
+    print "Now defining model... ", numimg, n, f
 
     model = RandomForestClassifier(n_estimators=n_estimators,
-                                   criterion=criterion,
-                                   max_features=max_features,
-                                   max_depth=max_depth,
-                                   min_samples_split=min_samples_split,
-                                   min_samples_leaf=min_samples_leaf,
-                                   max_leaf_nodes=max_leaf_nodes,
                                    n_jobs=n_jobs,
                                    verbose=verbose)
 
-    model.fit(train, labels, sample_weight)
+    print "Now training model..."
+
+    model.fit(train, labels)
+
+    import pickle
+    pickle.dump(model, open("model.m", 'wb'))
+
+    print "Now predicting samples..."
     predictions = model.predict_proba(test)[:,1]
     return predictions.reshape((512,512,numimg))
 
@@ -128,16 +129,52 @@ def getFeatureMatrix(imagematrix, labelmatrix = None, featureExtractor = FEATURE
     return resultfeatures
 
 
-if __name__ == '__main__':
-    #imagematrix, labelmatrix = readAllTraining()
-    #imagematrix = readAllTesting()
-    #imagematrix = imagematrix.astype('uint8')
-    #resultfeatures = getFeatureMatrix(imagematrix)
-    #np.save("resultfeaturestest", resultfeatures)
-    #np.save("resultlabels", resultlabels)
+def filterData():
+    train = np.load('train.npy')
+    labels = np.load('labels.npy')
+    #test = np.load('test.npy')
+    n, f = np.shape(train)
+    result = np.ones((n), dtype=bool)
+    print np.sum(result)
+    for i in range(n):
+        #print train[i,:]
+        if max(train[i,:]) < 0.05 and min(train[i,:]) > -0.05:
+            result[i] = False
+    print np.sum(result)
+    print np.shape(train[result,:])
+    np.save('trainfilter.npy', train[result,:])
+    np.save('labelfilter.npy', labels[result])
 
-    train = np.load('resultfeatures.npy')
-    labels = np.load('resultlabels.npy')
-    test = np.load('resultfeaturestest.npy')
-    predictions = randomForest(train, labels, test, n_estimators=200, n_jobs=2, verbose=1)
+if __name__ == '__main__':
+    import sys
+    imagematrix, labelmatrix = readAllTraining()
+    imagematrix = readAllTesting()
+    imagematrix = imagematrix.astype('uint8')
+    resultfeatures = getFeatureMatrix(imagematrix)
+    np.save("resultfeaturestest", resultfeatures)
+
+    train = np.load('trainfilter.npy')
+    labels = np.load('labelfilter.npy')
+    test = np.load('test.npy')
+    test = np.nan_to_num(test)
+    test = np.zeros((512*512, 1))
+
+    np.save('resultlabels2.npy', labels.astype('float32'))
+    np.save('resultfeaturestest2.npy', test.astype('float32'))
+    predictions = randomForest(train, labels, test, n_estimators=100, n_jobs=2, verbose=100)
+    import pickle
+    model = pickle.load(open('model.m', 'rb'))
+    n,f = np.shape(test)
+    assert n % (512*512) == 0
+    numimg = int(n / (512*512))
+    predictions = model.predict_proba(test)[:,1]
+    x = predictions.reshape((512,512,numimg))
     np.save("predictions", predictions)
+
+
+    x = np.load('predictions.npy')
+    x = x.reshape(512,512,100)
+    print np.shape(x)
+    i = 68
+    print i
+    skio.imshow(x[:,:,i])
